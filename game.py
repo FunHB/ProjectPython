@@ -29,7 +29,7 @@ class Game:
 
             # Game Render            
             self.draw_grid()
-            self.forest.step(pygame.time.get_ticks())
+            self.forest.next_gen(pygame.time.get_ticks())
             #
 
             pygame.display.flip()
@@ -48,7 +48,7 @@ class Game:
             return (220, 0, 0)
         
         if (type == Type.LIGHTNINT):
-            return (0, 0, 220)
+            return (100, 100, 220)
 
         if (type == Type.TREE):
             return (0, 220, 0)

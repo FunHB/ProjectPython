@@ -37,20 +37,26 @@ class Forest:
         return grid
 
 
-    def neighbors_check(self, idx: int, jdx: int, type: Type, radius=1) -> bool:
+    def neighbors_check(self, position, type: Type, radius=1) -> bool:
+        x, y = position
+        
         for di in range(-radius, radius + 1):
             for dj in range(-radius, radius + 1):
                 if di == 0 and dj == 0:
                     continue
 
-                ni, nj = idx + di, jdx + dj
+                ni, nj = x + di, y + dj
                 if 0 <= ni < self.size and 0 <= nj < self.size:
                     if self.grid[ni, nj] == type:
-                        return True
-        return False
+                        return (ni, nj)
+        return None
 
 
     def next_state(self, position: tuple[int, int]) -> Type:
+        # Any -> Lightning
+        if np.random.rand() < self.lightning_prob:
+            return Type.LIGHTNINT
+        
         # Burning -> Empty
         if self.grid[position] == Type.BURNING:
             return Type.EMPTY
@@ -61,25 +67,23 @@ class Forest:
             
         # Empty -> Tree
         if self.grid[position] == Type.EMPTY:
-            if self.neighbors_check(position, Type.TREE, self.radius):
+            if self.neighbors_check(position, Type.TREE, self.radius) and np.random.rand() < self.growth_prob:
                 return Type.TREE
         
         # Tree -> Burning
         if self.grid[position] == Type.TREE:
             if self.neighbors_check(position, Type.BURNING, self.radius) and np.random.rand() < self.spread_prob:
                 return Type.BURNING
-        
-        # Any -> Lightning
-        if np.random.rand() < self.lightning_prob:
-            return Type.LIGHTNINT
+            
+        return self.grid[position]
         
 
-    def frame(self, current_frame: int = None) -> None:
+    def next_gen(self, current_frame: int = None) -> None:
         new_grid = self.grid.copy()
     
         for i in range(self.size):
             for j in range(self.size):
-                new_grid[i, j] = self.next_state(i, j)
+                new_grid[i, j] = self.next_state((i, j))
 
         self.grid = new_grid
 
