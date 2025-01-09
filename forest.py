@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.stats as stats
 import pandas as pd
 from enum import Enum
 
@@ -8,7 +9,7 @@ class Type(Enum):
     TREE = 1
     BURNING = 2
     LIGHTNINT = 3
-    FOLIAGE = 4
+    ASH = 4
 
 
 class Forest:
@@ -26,9 +27,16 @@ class Forest:
         self.radius = radius
 
         self.grid = self.initialize_grid()
+        self.humidity = self.initialize_humidity()
         self.history = pd.DataFrame(
             columns=['step', 'burning', 'tree', 'empty'])
 
+
+    def initialize_humidity(self) -> np.ndarray:
+        mu, sigma = 1, .2        
+        min, max = 0.5, 1.5
+        return stats.truncnorm((min - mu) / sigma, (max - mu) / sigma, loc=mu, scale=sigma).rvs(size=(self.size, self.size))
+    
 
     def initialize_grid(self) -> np.ndarray:
         grid = np.random.choice([Type.EMPTY, Type.TREE],
@@ -57,13 +65,17 @@ class Forest:
         if np.random.rand() < self.lightning_prob:
             return Type.LIGHTNINT
         
-        # Burning -> Empty
-        if self.grid[position] == Type.BURNING:
-            return Type.EMPTY
-        
         # Lightning -> Burning
         if self.grid[position] == Type.LIGHTNINT:
             return Type.BURNING
+        
+        # Burning -> Ash
+        if self.grid[position] == Type.BURNING:
+            return Type.ASH
+            
+        # ASH -> Empty
+        if self.grid[position] == Type.ASH:
+            return Type.EMPTY
             
         # Empty -> Tree
         if self.grid[position] == Type.EMPTY:
@@ -72,9 +84,10 @@ class Forest:
         
         # Tree -> Burning
         if self.grid[position] == Type.TREE:
-            if self.neighbors_check(position, Type.BURNING, self.radius) and np.random.rand() < self.spread_prob:
+            if self.neighbors_check(position, Type.BURNING, self.radius) and np.random.rand() < self.spread_prob * self.humidity[position]:
                 return Type.BURNING
-            
+        
+        # Default
         return self.grid[position]
         
 

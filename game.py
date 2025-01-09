@@ -1,5 +1,4 @@
 import pygame
-import math
 
 from forest import Forest
 from forest import Type
@@ -40,17 +39,24 @@ class Game:
         for x in range(0, self.size, self.block_size):
             for y in range(0, self.size, self.block_size):
                 rect = pygame.Rect(x, y, self.block_size, self.block_size)
-                pygame.draw.rect(self.screen, self.get_color(self.forest.grid[x // self.block_size][y // self.block_size]), rect)
+                pos = (x // self.block_size, y // self.block_size)
+                pygame.draw.rect(self.screen, self.get_color(pos), rect)
 
 
-    def get_color(self, type: Type) -> tuple[float, float, float]:
-        if (type == Type.BURNING):
-            return (220, 0, 0)
+    def get_color(self, pos: tuple[int, int]) -> tuple[float, float, float]:
+        type = self.forest.grid[pos]
+        humidity = self.forest.humidity[pos]
         
         if (type == Type.LIGHTNINT):
             return (100, 100, 220)
+        
+        if (type == Type.BURNING):
+            return (220, 0, 0)
+        
+        if (type == Type.ASH):
+            return (50, 50, 50)
 
         if (type == Type.TREE):
-            return (0, 220, 0)
+            return tuple([0, 120, 0] / humidity)
         
         return (220, 220, 220)
