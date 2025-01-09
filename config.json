@@ -1,0 +1,10 @@
+{
+    "size": 100,
+    "tree_density": 0.6,
+    "lightning_prob": 0.0001,
+    "growth_prob": 0.01,
+    "spread_prob": 0.4,
+    "steps": 50,
+    "interval": 200,
+    "radius": 2
+  }
