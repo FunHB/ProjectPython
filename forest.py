@@ -7,6 +7,7 @@ class Type(Enum):
     TREE = 1
     BURNING = 2
     LIGHTNINT = 3
+    FOLIAGE = 4
 
 class Forest:
     def __init__(self, size: int,
@@ -31,15 +32,15 @@ class Forest:
                                 p=[1 - self.tree_density, self.tree_density])
         return grid
 
-    def fire_neighbors_check(self, idx: int, jdx: int) -> bool:
-        for di in range(-self.radius, self.radius + 1):
-            for dj in range(-self.radius, self.radius + 1):
+    def neighbors_check(self, idx: int, jdx: int, type: Type, radius = 1) -> bool:
+        for di in range(-radius, radius + 1):
+            for dj in range(-radius, radius + 1):
                 if di == 0 and dj == 0:
                     continue
 
                 ni, nj = idx + di, jdx + dj
                 if 0 <= ni < self.size and 0 <= nj < self.size:
-                    if self.grid[ni, nj] == Type.BURNING:
+                    if self.grid[ni, nj] == type:
                         return True
         return False
 
@@ -53,17 +54,22 @@ class Forest:
                     # Płonące drzewo po tym kroku staje się puste
                     new_grid[i, j] = Type.EMPTY
                 else:
-                    if self.grid[i, j] == Type.TREE:
-                        # Szansa zapalenia od pioruna
-                        if np.random.rand() < self.lightning_prob:
-                            new_grid[i, j] = Type.BURNING
+                    if self.grid[i, j] == Type.LIGHTNINT:
+                        new_grid[i, j] = Type.BURNING
+                    elif self.grid[i, j] == Type.TREE:
                         # Szansa zapalenia od sąsiada
-                        elif self.fire_neighbors_check(i, j):
+                        if self.neighbors_check(i, j, Type.BURNING, self.radius):
                             if np.random.rand() < self.spread_prob:
                                 new_grid[i, j] = Type.BURNING
                     else:  # EMPTY
                         if np.random.rand() < self.growth_prob:
-                            new_grid[i, j] = Type.TREE
+                            if self.neighbors_check(i, j, Type.TREE, self.radius):
+                                new_grid[i, j] = Type.TREE
+                
+                # Szansa zapalenia od pioruna
+                if np.random.rand() < self.lightning_prob:
+                    new_grid[i, j] = Type.LIGHTNINT
+        
 
         self.grid = new_grid
 

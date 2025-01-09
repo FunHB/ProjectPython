@@ -9,8 +9,8 @@ class Game:
     def __init__(self, forest: Forest):
         pygame.init()
 
-        self.fps = 2
-        self.block_size = 5
+        self.fps = 60
+        self.block_size = 800 // forest.size
 
         self.size = self.block_size * forest.size
         self.screen = pygame.display.set_mode((self.size, self.size))
@@ -44,6 +44,9 @@ class Game:
         if (type == Type.BURNING):
             return (220, 0, 0)
         
+        if (type == Type.LIGHTNINT):
+            return (0, 0, 220)
+
         if (type == Type.TREE):
             return (0, 220, 0)
         
