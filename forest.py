@@ -6,6 +6,7 @@ class Type(Enum):
     EMPTY = 0
     TREE = 1
     BURNING = 2
+    LIGHTNINT = 3
 
 class Forest:
     def __init__(self, size: int,
