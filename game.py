@@ -4,12 +4,12 @@ import math
 from forest import Forest
 from forest import Type
 
-class Game:
 
-    def __init__(self, forest: Forest):
+class Game:
+    def __init__(self, forest: Forest) -> None:
         pygame.init()
 
-        self.fps = 60
+        self.fps = 10
         self.block_size = 800 // forest.size
 
         self.size = self.block_size * forest.size
@@ -18,7 +18,8 @@ class Game:
         self.running = True
         self.forest = forest
 
-    def start(self):
+
+    def start(self) -> None:
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -34,13 +35,15 @@ class Game:
             pygame.display.flip()
             self.clock.tick(self.fps)
 
-    def draw_grid(self):
+
+    def draw_grid(self) -> None:
         for x in range(0, self.size, self.block_size):
             for y in range(0, self.size, self.block_size):
                 rect = pygame.Rect(x, y, self.block_size, self.block_size)
                 pygame.draw.rect(self.screen, self.get_color(self.forest.grid[x // self.block_size][y // self.block_size]), rect)
 
-    def get_color(self, type: Type):
+
+    def get_color(self, type: Type) -> tuple[float, float, float]:
         if (type == Type.BURNING):
             return (220, 0, 0)
         

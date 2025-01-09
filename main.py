@@ -1,8 +1,9 @@
-from forest import Forest
-from visualization import animate_forest
 from typing import Dict, Any
 import json
+
 from game import Game
+from forest import Forest
+
 
 def load_config(file_path: str) -> Dict[str, Any]:
     try:
@@ -30,9 +31,6 @@ def main() -> None:
                         growth_prob=growth_prob,
                         spread_prob=spread_prob,
                         radius=radius)
-
-        steps = params.get('steps')
-        interval = params.get('interval')
 
         game = Game(forest)
         game.start()
