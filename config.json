@@ -4,7 +4,6 @@
     "lightning_prob": 0.000005,
     "growth_prob": 0.03,
     "spread_prob": 0.6,
-    "steps": 50,
-    "interval": 200,
+    "wind": [-1.2, 1],
     "radius": 1
   }

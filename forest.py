@@ -18,12 +18,14 @@ class Forest:
                  lightning_prob: float,
                  growth_prob: float,
                  spread_prob: float,
+                 wind: np.ndarray,
                  radius: int) -> None:
         self.size = size
         self.tree_density = tree_density
         self.lightning_prob = lightning_prob
         self.growth_prob = growth_prob
         self.spread_prob = spread_prob
+        self.wind = wind
         self.radius = radius
 
         self.grid = self.initialize_grid()
@@ -60,35 +62,39 @@ class Forest:
         return None
 
 
-    def next_state(self, position: tuple[int, int]) -> Type:
+    def next_state(self, pos: tuple[int, int]) -> Type:
         # Any -> Lightning
         if np.random.rand() < self.lightning_prob:
             return Type.LIGHTNINT
         
         # Lightning -> Burning
-        if self.grid[position] == Type.LIGHTNINT:
+        if self.grid[pos] == Type.LIGHTNINT:
             return Type.BURNING
         
         # Burning -> Ash
-        if self.grid[position] == Type.BURNING:
+        if self.grid[pos] == Type.BURNING:
             return Type.ASH
             
         # ASH -> Empty
-        if self.grid[position] == Type.ASH:
+        if self.grid[pos] == Type.ASH:
             return Type.EMPTY
             
         # Empty -> Tree
-        if self.grid[position] == Type.EMPTY:
-            if self.neighbors_check(position, Type.TREE, self.radius) and np.random.rand() < self.growth_prob:
+        if self.grid[pos] == Type.EMPTY:
+            if self.neighbors_check(pos, Type.TREE, self.radius) and np.random.rand() < self.growth_prob:
                 return Type.TREE
         
         # Tree -> Burning
-        if self.grid[position] == Type.TREE:
-            if self.neighbors_check(position, Type.BURNING, self.radius) and np.random.rand() < self.spread_prob * self.humidity[position]:
-                return Type.BURNING
+        if self.grid[pos] == Type.TREE:
+            if (self.neighbors_check(pos, Type.BURNING, self.radius)):
+                fire_vector = np.array(self.neighbors_check(pos, Type.BURNING, self.radius)) - np.array(pos)
+                angle = np.arccos(np.dot(fire_vector, self.wind) / (np.linalg.norm(fire_vector) * np.linalg.norm(self.wind)))
+                
+                if np.random.rand() < self.spread_prob * self.humidity[pos] * angle / np.pi:
+                    return Type.BURNING
         
         # Default
-        return self.grid[position]
+        return self.grid[pos]
         
 
     def next_gen(self, current_frame: int = None) -> None:

@@ -23,6 +23,7 @@ def main() -> None:
         lightning_prob = params.get('lightning_prob')
         growth_prob = params.get('growth_prob')
         spread_prob = params.get('spread_prob')
+        wind = params.get('wind')
         radius = params.get('radius')
 
         forest = Forest(size=size,
@@ -30,6 +31,7 @@ def main() -> None:
                         lightning_prob=lightning_prob,
                         growth_prob=growth_prob,
                         spread_prob=spread_prob,
+                        wind=wind,
                         radius=radius)
 
         game = Game(forest)
