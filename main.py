@@ -2,7 +2,7 @@ from forest import Forest
 from visualization import animate_forest
 from typing import Dict, Any
 import json
-
+from game import Game
 
 def load_config(file_path: str) -> Dict[str, Any]:
     try:
@@ -34,7 +34,10 @@ def main() -> None:
         steps = params.get('steps')
         interval = params.get('interval')
 
-        animate_forest(forest, steps=steps, interval=interval)
+        game = Game(forest)
+        game.start()
+
+        # animate_forest(forest, steps=steps, interval=interval)
 
     except Exception as e:
         print(f"An error occurred: {e}")
