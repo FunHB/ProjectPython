@@ -44,6 +44,11 @@ class Forest:
             p=[1 - self.tree_density, self.tree_density]
         )
 
+    def simulation_reset(self) -> None:
+        self.grid = self.initialize_grid()
+        self.humidity = self.initialize_humidity()
+        self.history = pd.DataFrame(columns=['step', 'burning', 'tree', 'empty'])
+
     def neighbors_check(self, position: tuple[int, int], type_check: Type, radius: int = 1) -> tuple[int, int] | None:
         x, y = position
 

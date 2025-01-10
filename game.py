@@ -1,7 +1,8 @@
 import pygame
+import pygame_gui
+from pygame_gui.elements import UIButton
 
-from forest import Forest
-from forest import Type
+from forest import Forest, Type
 
 
 class Game:
@@ -12,31 +13,50 @@ class Game:
         self.block_size = 800 // forest.size
 
         self.size = self.block_size * forest.size
-        self.screen = pygame.display.set_mode((self.size, self.size))
+        self.screen = pygame.display.set_mode((self.size + 200, self.size))
         self.clock = pygame.time.Clock()
         self.running = True
         self.forest = forest
 
+        self.manager = pygame_gui.UIManager((self.size + 200, self.size))
+        self.restart_button = UIButton(
+            relative_rect=pygame.Rect((self.size + 25, (self.size - 150) // 2), (150, 50)),
+            text='Restart',
+            manager=self.manager
+        )
+
     def start(self) -> None:
         while self.running:
+            time_delta = self.clock.tick(self.fps) / 1000.0
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
 
-            self.screen.fill("white")
+                if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == self.restart_button:
+                        self.forest.simulation_reset()
 
-            # Game Render            
+                self.manager.process_events(event)
+
+            self.manager.update(time_delta)
+
+            self.screen.fill((24, 24, 24))
+
+            # Game Render
             self.draw_grid()
             self.forest.next_gen(pygame.time.get_ticks())
 
+            # Renderowanie GUI
+            self.manager.draw_ui(self.screen)
+
             pygame.display.flip()
-            self.clock.tick(self.fps)
 
     def draw_grid(self) -> None:
-        for x in range(0, self.size, self.block_size):
-            for y in range(0, self.size, self.block_size):
-                rect = pygame.Rect(x, y, self.block_size, self.block_size)
-                pos = (x // self.block_size, y // self.block_size)
+        for x in range(0, self.forest.size):
+            for y in range(0, self.forest.size):
+                rect = pygame.Rect(x * self.block_size, y * self.block_size, self.block_size, self.block_size)
+                pos = (x, y)
                 pygame.draw.rect(self.screen, self.get_color(pos), rect)
 
     def get_color(self, pos: tuple[int, int]) -> tuple[int, int, int]:

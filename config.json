@@ -1,8 +1,8 @@
 {
     "size": 200,
-    "tree_density": 0.2,
+    "tree_density": 0.7,
     "lightning_prob": 0.000005,
-    "growth_prob": 0.03,
+    "growth_prob": 0.008,
     "spread_prob": 0.6,
     "wind": [-1.2, 1],
     "radius": 1
