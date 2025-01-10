@@ -37,8 +37,6 @@ def main() -> None:
         game = Game(forest)
         game.start()
 
-        # animate_forest(forest, steps=steps, interval=interval)
-
     except Exception as e:
         print(f"An error occurred: {e}")
 

@@ -17,7 +17,6 @@ class Game:
         self.running = True
         self.forest = forest
 
-
     def start(self) -> None:
         while self.running:
             for event in pygame.event.get():
@@ -29,11 +28,9 @@ class Game:
             # Game Render            
             self.draw_grid()
             self.forest.next_gen(pygame.time.get_ticks())
-            #
 
             pygame.display.flip()
             self.clock.tick(self.fps)
-
 
     def draw_grid(self) -> None:
         for x in range(0, self.size, self.block_size):
@@ -42,21 +39,21 @@ class Game:
                 pos = (x // self.block_size, y // self.block_size)
                 pygame.draw.rect(self.screen, self.get_color(pos), rect)
 
-
-    def get_color(self, pos: tuple[int, int]) -> tuple[float, float, float]:
-        type = self.forest.grid[pos]
+    def get_color(self, pos: tuple[int, int]) -> tuple[int, int, int]:
+        cell_type = self.forest.grid[pos]
         humidity = self.forest.humidity[pos]
-        
-        if (type == Type.LIGHTNINT):
-            return (100, 100, 220)
-        
-        if (type == Type.BURNING):
-            return (220, 0, 0)
-        
-        if (type == Type.ASH):
-            return (50, 50, 50)
 
-        if (type == Type.TREE):
-            return tuple([0, 120, 0] / humidity)
-        
-        return (220, 220, 220)
+        if cell_type == Type.LIGHTNING:
+            return 100, 100, 220
+
+        if cell_type == Type.BURNING:
+            return 220, 0, 0
+
+        if cell_type == Type.ASH:
+            return 50, 50, 50
+
+        if cell_type == Type.TREE:
+            green_intensity = int(120 / humidity)
+            return 0, max(0, green_intensity), 0
+
+        return 220, 220, 220
