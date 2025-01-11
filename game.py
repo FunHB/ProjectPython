@@ -1,29 +1,29 @@
 import pygame
 import pygame_gui
-from pygame_gui.elements import UIButton
+
+import numpy as np
 
 from forest import Forest, Type
 
 
 class Game:
-    def __init__(self, forest: Forest) -> None:
+    def __init__(self, forest: Forest, width: int = 1600, height: int = 900) -> None:
         pygame.init()
+        pygame.display.set_caption("Symulacja Pożaru Lasu")
 
-        self.fps = 10
-        self.block_size = 800 // forest.size
-
-        self.size = self.block_size * forest.size
-        self.screen = pygame.display.set_mode((self.size + 200, self.size))
+        self.width = width
+        self.height = height
+        self.window_surface = pygame.display.set_mode((self.width, self.height))
+        self.manager = pygame_gui.UIManager((self.width, self.height))
         self.clock = pygame.time.Clock()
+        self.fps = 60
         self.running = True
+
+        self.single_block_size = 4
         self.forest = forest
 
-        self.manager = pygame_gui.UIManager((self.size + 200, self.size))
-        self.restart_button = UIButton(
-            relative_rect=pygame.Rect((self.size + 25, (self.size - 150) // 2), (150, 50)),
-            text='Restart',
-            manager=self.manager
-        )
+        self.grid_surface = pygame.Surface((forest.size, forest.size))
+        self.grid_pixels = np.zeros((forest.size, forest.size, 3), dtype=np.uint8)
 
     def start(self) -> None:
         while self.running:
@@ -33,47 +33,48 @@ class Game:
                 if event.type == pygame.QUIT:
                     self.running = False
 
-                if event.type == pygame_gui.UI_BUTTON_PRESSED:
-                    if event.ui_element == self.restart_button:
-                        self.forest.simulation_reset()
-
                 self.manager.process_events(event)
 
             self.manager.update(time_delta)
 
-            self.screen.fill((24, 24, 24))
-
-            # Game Render
-            self.draw_grid()
+            # Aktualizacja stanu lasu
             self.forest.next_gen(pygame.time.get_ticks())
 
+            # Aktualizacja kolorów pikseli
+            color_array = self.get_color_array()
+            pygame.surfarray.blit_array(self.grid_surface, color_array)
+            scaled_size = (self.forest.size * self.single_block_size, self.forest.size * self.single_block_size)
+            scaled_grid = pygame.transform.scale(self.grid_surface, scaled_size)
+
             # Renderowanie GUI
-            self.manager.draw_ui(self.screen)
+            self.window_surface.fill((24, 24, 24))
+            self.window_surface.blit(scaled_grid, (400, 50))
+            self.manager.draw_ui(self.window_surface)
 
             pygame.display.flip()
 
-    def draw_grid(self) -> None:
-        for x in range(0, self.forest.size):
-            for y in range(0, self.forest.size):
-                rect = pygame.Rect(x * self.block_size, y * self.block_size, self.block_size, self.block_size)
-                pos = (x, y)
-                pygame.draw.rect(self.screen, self.get_color(pos), rect)
+    def get_color_array(self) -> np.ndarray:
+        grid_flat = self.forest.grid.flatten()
+        humidity_flat = self.forest.humidity.flatten()
 
-    def get_color(self, pos: tuple[int, int]) -> tuple[int, int, int]:
-        cell_type = self.forest.grid[pos]
-        humidity = self.forest.humidity[pos]
+        colors = np.zeros((self.forest.size ** 2, 3), dtype=np.uint8)
 
-        if cell_type == Type.LIGHTNING:
-            return 100, 100, 220
+        # Type.EMPTY
+        colors[grid_flat == Type.EMPTY] = [220, 220, 220]
 
-        if cell_type == Type.BURNING:
-            return 220, 0, 0
+        # Type.TREE
+        green_intensity = np.clip((120 / humidity_flat[grid_flat == Type.TREE]).astype(np.uint8), 0, 255)
+        colors[grid_flat == Type.TREE] = np.stack([np.zeros_like(green_intensity),
+                                                   green_intensity,
+                                                   np.zeros_like(green_intensity)], axis=1)
 
-        if cell_type == Type.ASH:
-            return 50, 50, 50
+        # Type.BURNING
+        colors[grid_flat == Type.BURNING] = [220, 0, 0]
 
-        if cell_type == Type.TREE:
-            green_intensity = int(120 / humidity)
-            return 0, max(0, green_intensity), 0
+        # Type.LIGHTNING
+        colors[grid_flat == Type.LIGHTNING] = [100, 100, 220]
 
-        return 220, 220, 220
+        # Type.ASH
+        colors[grid_flat == Type.ASH] = [50, 50, 50]
+
+        return colors.reshape((self.forest.size, self.forest.size, 3))
