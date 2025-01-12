@@ -1,0 +1,21 @@
+{
+  "label": {
+    "colours": {
+      "normal_text": "#c5cbd8",
+      "text_shadow": "#505050"
+    },
+    "font": {
+      "name": "Arial",
+      "size": "52",
+      "bold": "0",
+      "italic": "0"
+    },
+    "misc": {
+      "text_horiz_alignment": "center",
+      "text_vert_alignment": "center",
+      "text_shadow": "1",
+      "text_shadow_offset": "0,0",
+      "text_shadow_size": "1"
+    }
+  }
+}
