@@ -5,6 +5,11 @@ import numpy as np
 
 from forest import Forest, Type
 
+import pylab
+import matplotlib.backends.backend_agg as agg
+import matplotlib
+matplotlib.use("Agg")
+
 
 class Game:
     def __init__(self, forest: Forest, width: int = 1600, height: int = 900) -> None:
@@ -29,6 +34,8 @@ class Game:
         self.grid_surface = pygame.Surface((forest.size, forest.size))
         self.grid_pixels = np.zeros(
             (forest.size, forest.size, 3), dtype=np.uint8)
+        
+        self.humidity_surface = self.initialize_humidity()
 
     def initialize_left_panel(self):
         panel = {'rect': pygame.Rect((0, 0), (400, self.height)),
@@ -44,6 +51,34 @@ class Game:
 
         return panel
 
+    def initialize_humidity(self):
+        fig = pylab.figure(figsize=[4, 4], dpi=100)
+        ax = fig.gca()
+        ax.set_facecolor((24 / 255, 24 / 255, 24 / 255))
+        ax.imshow(np.flipud(np.rot90(self.forest.humidity)), cmap="viridis")
+        for axis in ['top', 'bottom', 'left', 'right']:
+            ax.spines[axis].set_linewidth(0)
+        ax.axes.get_xaxis().set_ticks([])
+        ax.axes.get_yaxis().set_ticks([])
+
+        canvas = agg.FigureCanvasAgg(fig)
+        canvas.draw()
+        renderer = canvas.get_renderer()
+        raw_data = renderer.tostring_argb()
+        
+        size = canvas.get_width_height()
+        return pygame.image.frombytes(raw_data, size, "ARGB")
+
+    def draw_wind_compass(self):
+        wind_surface = pygame.surface.Surface((150, 150))
+        wind_surface.fill(pygame.Color(24, 24, 24))
+        wind_center = pygame.Vector2(wind_surface.width / 2, wind_surface.height / 2)
+        wind_vector = pygame.Vector2(self.forest.wind) * 125
+        pygame.draw.circle(wind_surface, pygame.Color(50, 50, 50), wind_center, 75)
+        draw_arrow(wind_surface, wind_center - (wind_vector / 2),
+                    wind_center + (wind_vector / 2), [220, 0, 0], 2, 20, 10)
+        self.window_surface.blit(wind_surface, (self.width - 400 + 100, self.height / 2 - 100))
+
     def process_events(self, event):
         if event.type == pygame.QUIT:
             self.running = False
@@ -51,6 +86,7 @@ class Game:
             if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
                 if event.ui_element == self.left_panel['restart_button']:
                     self.forest.simulation_reset()
+                    self.humidity_surface = self.initialize_humidity()
 
     def start(self) -> None:
         while self.running:
@@ -73,19 +109,11 @@ class Game:
             scaled_grid = pygame.transform.scale(
                 self.grid_surface, scaled_size)
 
-            # Render wind compass
-            wind_surface = pygame.surface.Surface((150, 150))
-            wind_surface.fill(pygame.Color(24, 24, 24))
-            wind_center = pygame.Vector2(wind_surface.width / 2, wind_surface.height / 2)
-            wind_vector = pygame.Vector2(self.forest.wind) * 125
-            pygame.draw.circle(wind_surface, pygame.Color(50, 50, 50), wind_center, 75)
-            draw_arrow(wind_surface, wind_center - (wind_vector / 2),
-                       wind_center + (wind_vector / 2), [220, 0, 0], 2, 20, 10)
-
             # Renderowanie GUI
             self.window_surface.fill((24, 24, 24))
+            self.window_surface.blit(self.humidity_surface, (self.width - 400, self.height - 400))
             self.window_surface.blit(scaled_grid, (400, 50))
-            self.window_surface.blit(wind_surface, (self.width - 400 + 100, self.height / 2 - 100))
+            self.draw_wind_compass()
             self.manager.draw_ui(self.window_surface)
 
             pygame.display.flip()

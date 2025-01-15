@@ -2,6 +2,7 @@ from typing import Any
 
 import numpy as np
 import scipy.stats as stats
+from scipy.ndimage import gaussian_filter
 import pandas as pd
 import pygame
 from enum import Enum
@@ -29,16 +30,34 @@ class Forest:
 
         self.rng = np.random.default_rng()  # Seed do rng
         self.grid = self.initialize_grid()
-        self.humidity = self.initialize_humidity()
+        self.humidity = self.initialize_humidity(5, 15, (25, 75), 50)
+        # print(self.humidity)
         self.history = pd.DataFrame(
             columns=['step', 'burning', 'tree', 'empty'])
 
-    def initialize_humidity(self) -> np.ndarray:
-        mu, sigma = 1, .2
-        min_val, max_val = 0.5, 1.5
-        return stats.truncnorm(
-            (min_val - mu) / sigma, (max_val - mu) / sigma, loc=mu, scale=sigma
-        ).rvs(size=(self.size, self.size), random_state=self.rng)
+    def initialize_humidity(self, min_clusters=3, max_clusters=10, sigma_range=(5, 25), noise_scale=10) -> np.ndarray:
+        x, y = np.meshgrid(np.linspace(0, self.size, self.size), np.linspace(0, self.size, self.size))
+    
+        # Randomize the number of clusters
+        num_clusters = np.random.randint(min_clusters, max_clusters + 1)
+        
+        # Randomize cluster parameters
+        centers = [(np.random.uniform(0, x.__len__()), np.random.uniform(0, y.__len__())) for _ in range(num_clusters)]
+        amplitudes = [np.random.uniform(0.5, 1.5) for _ in range(num_clusters)]
+        sigmas = [(np.random.uniform(*sigma_range), np.random.uniform(*sigma_range)) for _ in range(num_clusters)]
+        
+        # Create Perlin-like noise
+        noise_x = gaussian_filter(np.random.rand(*x.shape), sigma=noise_scale)
+        noise_y = gaussian_filter(np.random.rand(*y.shape), sigma=noise_scale)
+
+        # Generate clusters
+        result = np.zeros_like(x)
+        for (cx, cy), A, (sigma_x, sigma_y) in zip(centers, amplitudes, sigmas):
+            wobble_x = cx + noise_x
+            wobble_y = cy + noise_y
+            result += A * np.exp(-((x - wobble_x)**2 / (2 * sigma_x**2) + (y - wobble_y)**2 / (2 * sigma_y**2)))
+        
+        return .5 + np.clip(result / np.max(result), 0.5, 1.5)
 
     def initialize_grid(self) -> np.ndarray:
         return self.rng.choice(
@@ -49,7 +68,7 @@ class Forest:
 
     def simulation_reset(self) -> None:
         self.grid = self.initialize_grid()
-        self.humidity = self.initialize_humidity()
+        self.humidity = self.initialize_humidity(5, 15, (25, 75), 50)
         self.history = pd.DataFrame(
             columns=['step', 'burning', 'tree', 'empty'])
 
