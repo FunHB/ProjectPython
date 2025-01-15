@@ -43,7 +43,7 @@ class Forest:
         
         # Randomize cluster parameters
         centers = [(np.random.uniform(0, x.__len__()), np.random.uniform(0, y.__len__())) for _ in range(num_clusters)]
-        amplitudes = [np.random.uniform(0.5, 1.5) for _ in range(num_clusters)]
+        amplitudes = [np.random.uniform(0.5, 1) for _ in range(num_clusters)]
         sigmas = [(np.random.uniform(*sigma_range), np.random.uniform(*sigma_range)) for _ in range(num_clusters)]
         
         # Create Perlin-like noise
@@ -57,7 +57,7 @@ class Forest:
             wobble_y = cy + noise_y
             result += A * np.exp(-((x - wobble_x)**2 / (2 * sigma_x**2) + (y - wobble_y)**2 / (2 * sigma_y**2)))
         
-        return .5 + np.clip(result / np.max(result), 0.5, 1.5)
+        return .5 + np.clip(result / np.max(result), 0, 1)
 
     def initialize_grid(self) -> np.ndarray:
         return self.rng.choice(
@@ -68,7 +68,7 @@ class Forest:
 
     def simulation_reset(self) -> None:
         self.grid = self.initialize_grid()
-        self.humidity = self.initialize_humidity(5, 15, (25, 75), 50)
+        self.humidity = self.initialize_humidity(5, 15, (25, 50), 50)
         self.history = pd.DataFrame(
             columns=['step', 'burning', 'tree', 'empty'])
 
@@ -99,7 +99,8 @@ class Forest:
 
         # Burning -> Ash
         if current_type == Type.BURNING:
-            return Type.ASH
+            if self.rng.random() < (2 - self.humidity[pos]):
+                return Type.ASH
 
         # ASH -> Empty
         if current_type == Type.ASH:
@@ -118,7 +119,7 @@ class Forest:
                         pygame.Vector2(pos)).normalize()
                 angle = np.arccos(fire.dot(self.wind))
 
-                if self.rng.random() < self.spread_prob * self.humidity[pos] * (angle / np.pi):
+                if self.rng.random() < self.spread_prob * (2 - self.humidity[pos]) * (angle / np.pi):
                     return Type.BURNING
 
         # Default
