@@ -3,6 +3,7 @@ from typing import Any
 import numpy as np
 import scipy.stats as stats
 import pandas as pd
+import pygame
 from enum import Enum
 
 
@@ -16,19 +17,21 @@ class Type(Enum):
 
 class Forest:
     def __init__(self, size: int, tree_density: float, lightning_prob: float, growth_prob: float,
-                 spread_prob: float, wind: np.ndarray, radius: int) -> None:
+                 spread_prob: float, wind: pygame.Vector2, wind_change: float, radius: int) -> None:
         self.size = size
         self.tree_density = tree_density
         self.lightning_prob = lightning_prob
         self.growth_prob = growth_prob
         self.spread_prob = spread_prob
-        self.wind = wind
+        self.wind = pygame.Vector2(wind).normalize()
+        self.wind_change = wind_change
         self.radius = radius
 
-        self.rng = np.random.default_rng(40)  # Seed do rng
+        self.rng = np.random.default_rng()  # Seed do rng
         self.grid = self.initialize_grid()
         self.humidity = self.initialize_humidity()
-        self.history = pd.DataFrame(columns=['step', 'burning', 'tree', 'empty'])
+        self.history = pd.DataFrame(
+            columns=['step', 'burning', 'tree', 'empty'])
 
     def initialize_humidity(self) -> np.ndarray:
         mu, sigma = 1, .2
@@ -47,9 +50,10 @@ class Forest:
     def simulation_reset(self) -> None:
         self.grid = self.initialize_grid()
         self.humidity = self.initialize_humidity()
-        self.history = pd.DataFrame(columns=['step', 'burning', 'tree', 'empty'])
+        self.history = pd.DataFrame(
+            columns=['step', 'burning', 'tree', 'empty'])
 
-    def neighbors_check(self, position: tuple[int, int], type_check: Type, radius: int = 1) -> tuple[int, int] | None:
+    def neighbors_check(self, position: tuple[int, int], type_check: Type, radius: int = 1) -> pygame.Vector2 | None:
         x, y = position
 
         for di in range(-radius, radius + 1):
@@ -63,7 +67,7 @@ class Forest:
                         return ni, nj
         return None
 
-    def next_state(self, pos: tuple[int, int]) -> Type | np.ndarray[tuple[int, ...], Any]:
+    def next_state(self, pos: tuple[int, int]) -> Type:
         # Any -> Lightning
         if self.rng.random() < self.lightning_prob:
             return Type.LIGHTNING
@@ -89,13 +93,13 @@ class Forest:
 
         # Tree -> Burning
         if current_type == Type.TREE:
-            if self.neighbors_check(pos, Type.BURNING, self.radius):
-                fire_vector = np.array(self.neighbors_check(pos, Type.BURNING, self.radius)) - np.array(pos)
-                angle = np.arccos(
-                    np.dot(fire_vector, self.wind) /
-                    (np.linalg.norm(fire_vector) * np.linalg.norm(self.wind))
-                )
-                if self.rng.random() < self.spread_prob * self.humidity[pos] * angle / np.pi:
+            fire_pos = self.neighbors_check(pos, Type.BURNING, self.radius)
+            if fire_pos:
+                fire = (pygame.Vector2(fire_pos) -
+                        pygame.Vector2(pos)).normalize()
+                angle = np.arccos(fire.dot(self.wind))
+
+                if self.rng.random() < self.spread_prob * self.humidity[pos] * (angle / np.pi):
                     return Type.BURNING
 
         # Default
@@ -121,4 +125,8 @@ class Forest:
                 'tree': [tree_count],
                 'empty': [empty_count]
             })
-            self.history = pd.concat([self.history, new_row], ignore_index=True)
+            self.history = pd.concat(
+                [self.history, new_row], ignore_index=True)
+
+        self.wind = self.wind.rotate(
+            (2 * self.rng.random() - 1) * self.wind_change)

@@ -1,5 +1,6 @@
 from typing import Dict, Any
 import json
+import traceback
 
 from game import Game
 from forest import Forest
@@ -24,6 +25,7 @@ def main() -> None:
         growth_prob = params.get('growth_prob')
         spread_prob = params.get('spread_prob')
         wind = params.get('wind')
+        wind_change = params.get('wind_change')
         radius = params.get('radius')
 
         forest = Forest(size=size,
@@ -32,13 +34,14 @@ def main() -> None:
                         growth_prob=growth_prob,
                         spread_prob=spread_prob,
                         wind=wind,
+                        wind_change=wind_change,
                         radius=radius)
 
         game = Game(forest)
         game.start()
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    except Exception:
+        print(f"An error occurred: {traceback.print_exc()}")
 
 
 if __name__ == "__main__":
