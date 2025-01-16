@@ -24,6 +24,7 @@ Texture2D<float> humidity : register(t1);
 Texture2D<float> noise : register(t2);
 
 RWTexture2D<int> target : register(u0);
+RWTexture2D<float> out_humidity : register(u1);
 // RWTexture2D<float2> test : register(u0);
 
 float remap(float value, float in_from, float in_to, float out_from, float out_to) {
@@ -77,6 +78,15 @@ int next_state(uint2 position) {
     // Empty -> Plant
     if (state == EMPTY) {
         if (neighbors_check(position, PLANT).x != -1 && noise[position] < growth_prob) {
+            for (int i = -1; i <= 1; i++) {
+                for (int j = -1; j <= 1; j++) {
+                    int2 neighbor = int2(position) + int2(i, j);
+                    if (neighbor.x >= 0 && neighbor.x < size && neighbor.y >= 0 && neighbor.y < size) {
+                        out_humidity[neighbor] = .001;
+                    }
+                }
+            }
+
             return PLANT;
         }
     }
@@ -89,6 +99,14 @@ int next_state(uint2 position) {
             float angle = acos(dot(fire_direction, wind));
 
             if (noise[position] < spread_prob * (2 - humidity[position]) * (angle / PI)) {
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        int2 neighbor = int2(position) + int2(i, j);
+                        if (neighbor.x >= 0 && neighbor.x < size && neighbor.y >= 0 && neighbor.y < size) {
+                            out_humidity[neighbor] = -.01;
+                        }
+                    }
+                }
                 return FIRE;
             }
         }
@@ -98,8 +116,7 @@ int next_state(uint2 position) {
     return state;
 }
 
-[numthreads(16, 16, 1)]
-void main(uint3 tid : SV_DispatchThreadID) {
+[numthreads(16, 16, 1)] void main(uint3 tid : SV_DispatchThreadID) {
     target[tid.xy] = next_state(tid.xy);
 
     // // Tests

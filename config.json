@@ -1,5 +1,5 @@
 {
-    "fps": 60,
+    "fps": 30,
     "tree_density": 0.7,
     "lightning_prob": 0.000005,
     "growth_prob": 0.008,

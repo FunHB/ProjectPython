@@ -52,6 +52,9 @@ class Forest:
 
         self.humidity_buffer.upload(b''.join([struct.pack('f', float(x)) for x in list(self.humidity.flatten())]))
         self.humidity_buffer.copy_to(self.humidity_texture)
+        
+        self.humidity_out = Texture2D(self.size, self.size, compushady.formats.R16_FLOAT)
+        self.humidity_out_buffer = Buffer(self.humidity_out.size, HEAP_READBACK)
 
         config = Buffer(96, HEAP_UPLOAD)
         self.config_fast = Buffer(config.size)
@@ -71,7 +74,10 @@ class Forest:
         self.target = Texture2D(self.size, self.size, compushady.formats.R8_UINT)
         self.target_buffer = Buffer(self.target.size, HEAP_READBACK)
 
-        self.compute = Compute(self.shader, cbv=[self.config_fast, self.wind_buffer], srv=[self.source, self.humidity_texture, self.noise], uav=[self.target])
+        self.compute = Compute(self.shader, 
+                               cbv=[self.config_fast, self.wind_buffer], 
+                               srv=[self.source, self.humidity_texture, self.noise], 
+                               uav=[self.target, self.humidity_out])
 
     def initialize_humidity(self, min_clusters=15, max_clusters=20, sigma_range=(20, 50), noise_scale=25) -> np.ndarray:
         x, y = np.meshgrid(np.linspace(0, self.size, self.size), np.linspace(0, self.size, self.size))
@@ -120,6 +126,10 @@ class Forest:
         self.source_buffer.upload(bytes(list(self.grid.flatten())))
         self.source_buffer.copy_to(self.source)
 
+        # Send Humidity out buffer
+        self.humidity_buffer.upload(b''.join([struct.pack('f', float(x)) for x in list(self.humidity.flatten())]))
+        self.humidity_buffer.copy_to(self.humidity_texture)
+
         # Send noise texture
         noise = np.clip(self.rng.uniform(0, 1, size=(self.size**2)), 0, 1)
 
@@ -135,6 +145,9 @@ class Forest:
 
         self.target.copy_to(self.target_buffer)
         array = np.array(list(self.target_buffer.readback())).reshape(self.size, self.size)
+        
+        self.humidity_out.copy_to(self.humidity_out_buffer)
+        self.humidity = np.clip(self.humidity + np.frombuffer(self.humidity_out_buffer.readback(), dtype=np.float16).reshape(self.size, self.size), 0.5, 1.5)
 
         return array
 
