@@ -23,7 +23,7 @@ class Game:
         self.manager = pygame_gui.UIManager(
             (self.width, self.height), 'theme.json')
         self.clock = pygame.time.Clock()
-        self.fps = 15
+        self.fps = 10
         self.running = True
 
         self.single_block_size = height // forest.size

@@ -120,69 +120,18 @@ class Forest:
         self.history = pd.DataFrame(
             columns=['step', 'burning', 'tree', 'empty'])
 
-    def neighbors_check(self, position: tuple[int, int], type_check: Type, radius: int = 1) -> pygame.Vector2 | None:
-        x, y = position
-
-        for di in range(-radius, radius + 1):
-            for dj in range(-radius, radius + 1):
-                if di == 0 and dj == 0:
-                    continue
-
-                ni, nj = x + di, y + dj
-                if 0 <= ni < self.size and 0 <= nj < self.size:
-                    if self.grid[ni, nj] == type_check:
-                        return ni, nj
-        return None
-
-    def next_state(self, pos: tuple[int, int]) -> Type:
-        # Any -> Lightning
-        if self.rng.random() < self.lightning_prob:
-            return Type.LIGHTNING
-
-        current_type = self.grid[pos]
-
-        # Lightning -> Burning
-        if current_type == Type.LIGHTNING:
-            return Type.BURNING
-
-        # Burning -> Ash
-        if current_type == Type.BURNING:
-            if self.rng.random() < (2 - self.humidity[pos]):
-                return Type.ASH
-
-        # ASH -> Empty
-        if current_type == Type.ASH:
-            return Type.EMPTY
-
-        # Empty -> Tree
-        if current_type == Type.EMPTY:
-            if self.neighbors_check(pos, Type.TREE, self.radius) and self.rng.random() < self.growth_prob:
-                # self.humidity[pos] = np.clip(self.humidity[pos] + self.rng.random() * (.1 - .01) + .01, .5, 1.5)
-                return Type.TREE
-
-        # Tree -> Burning
-        if current_type == Type.TREE:
-            fire_pos = self.neighbors_check(pos, Type.BURNING, self.radius)
-            if fire_pos:
-                fire = (pygame.Vector2(fire_pos) -
-                        pygame.Vector2(pos)).normalize()
-                angle = np.arccos(fire.dot(self.wind))
-
-                if self.rng.random() < self.spread_prob * (2 - self.humidity[pos]) * (angle / np.pi):
-                    # self.humidity[pos] = np.clip(self.humidity[pos] - self.rng.random() * (.1 - .01) + .01, .5, 1.5)
-                    return Type.BURNING
-
-        # Default
-        return current_type
-
     def next_gen(self, current_frame: int = None) -> None:
         self.source_buffer.upload(bytes(list(self.grid.flatten())))
         self.source_buffer.copy_to(self.source)
 
-        self.noise_buffer.upload(b''.join([struct.pack('f', float(x)) for x in list(self.rng.random(size=(self.size**2)))]))
+        noise = np.clip(self.rng.uniform(0, 1, size=(self.size**2)), 0, 1)
+
+        self.noise_buffer.upload(b''.join([struct.pack('f', float(x)) for x in noise]))
         self.noise_buffer.copy_to(self.noise)
 
-        self.wind_config.upload(struct.pack('ff', self.wind.x, self.wind.y))
+        # print(noise)
+
+        self.wind_config.upload(struct.pack('ff', float(self.wind.x), float(self.wind.y)))
         self.wind_config.copy_to(self.wind_buffer)
 
         self.compute.dispatch(self.size // 16, self.size // 16, 1)
@@ -215,3 +164,58 @@ class Forest:
 
         self.wind = self.wind.rotate(
             (2 * self.rng.random() - 1) * self.wind_change)
+
+    # def neighbors_check(self, position: tuple[int, int], type_check: Type, radius: int = 1) -> pygame.Vector2 | None:
+    #         x, y = position
+
+    #         for di in range(-radius, radius + 1):
+    #             for dj in range(-radius, radius + 1):
+    #                 if di == 0 and dj == 0:
+    #                     continue
+
+    #                 ni, nj = x + di, y + dj
+    #                 if 0 <= ni < self.size and 0 <= nj < self.size:
+    #                     if self.grid[ni, nj] == type_check:
+    #                         return ni, nj
+    #         return None
+
+    # def next_state(self, pos: tuple[int, int]) -> Type:
+    #     # Any -> Lightning
+    #     if self.rng.random() < self.lightning_prob:
+    #         return Type.LIGHTNING
+
+    #     current_type = self.grid[pos]
+
+    #     # Lightning -> Burning
+    #     if current_type == Type.LIGHTNING:
+    #         return Type.BURNING
+
+    #     # Burning -> Ash
+    #     if current_type == Type.BURNING:
+    #         if self.rng.random() < (2 - self.humidity[pos]):
+    #             return Type.ASH
+
+    #     # ASH -> Empty
+    #     if current_type == Type.ASH:
+    #         return Type.EMPTY
+
+    #     # Empty -> Tree
+    #     if current_type == Type.EMPTY:
+    #         if self.neighbors_check(pos, Type.TREE, self.radius) and self.rng.random() < self.growth_prob:
+    #             # self.humidity[pos] = np.clip(self.humidity[pos] + self.rng.random() * (.1 - .01) + .01, .5, 1.5)
+    #             return Type.TREE
+
+    #     # Tree -> Burning
+    #     if current_type == Type.TREE:
+    #         fire_pos = self.neighbors_check(pos, Type.BURNING, self.radius)
+    #         if fire_pos:
+    #             fire = (pygame.Vector2(fire_pos) -
+    #                     pygame.Vector2(pos)).normalize()
+    #             angle = np.arccos(fire.dot(self.wind))
+
+    #             if self.rng.random() < self.spread_prob * (2 - self.humidity[pos]) * (angle / np.pi):
+    #                 # self.humidity[pos] = np.clip(self.humidity[pos] - self.rng.random() * (.1 - .01) + .01, .5, 1.5)
+    #                 return Type.BURNING
+
+    #     # Default
+    #     return current_type

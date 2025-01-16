@@ -16,8 +16,7 @@ cbuffer Config : register(b0) {
 }
 
 cbuffer Wind : register(b1) {
-    float windx;
-    float windy;
+    float2 wind;
 };
 
 Texture2D<int> source : register(t0);
@@ -25,6 +24,7 @@ Texture2D<float> humidity : register(t1);
 Texture2D<float> noise : register(t2);
 
 RWTexture2D<int> target : register(u0);
+// RWTexture2D<float2> test : register(u0);
 
 // float random(float2 p2) {
 //     float3 p3 = float3(p2.xy, random_seed);
@@ -50,6 +50,10 @@ int2 neighbors_check(uint2 position, int type) {
     }
 
     return int2(-1, -1);
+}
+
+float ease_in(float value) {
+    return value * value;
 }
 
 int next_state(uint2 position) {
@@ -88,10 +92,10 @@ int next_state(uint2 position) {
     if (state == PLANT) {
         int2 fire_position = neighbors_check(position, FIRE);
         if (fire_position.x != -1 && fire_position.y != -1) {
-            int2 fire_direction = normalize(fire_position - position);
-            float angle = acos(dot(fire_direction, normalize(float2(windx, windy))));
+            float2 fire_direction = normalize(float2(((fire_position.xy) - position).xy));
+            float angle = acos(dot(fire_direction.xy, wind.xy));
 
-            if (noise[position.xy] < spread_prob * (2 - humidity[position.xy]) * (angle / PI)) {
+            if (noise[position.xy] < spread_prob * (2 - humidity[position.xy]) * ease_in(angle / PI)) {
                 return FIRE;
             }
         }
@@ -104,4 +108,7 @@ int next_state(uint2 position) {
 [numthreads(16, 16, 1)]
 void main(uint3 tid : SV_DispatchThreadID) {
     target[tid.xy] = next_state(tid.xy);
+
+    // Tests
+    // test[uint2(0, 0)] = wind.xy;
 }
