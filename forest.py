@@ -13,7 +13,7 @@ import compushady.formats
 from compushady import HEAP_READBACK, Buffer, Texture2D, HEAP_UPLOAD, Compute
 from compushady.shaders import hlsl
 
-compushady.config.set_debug(True)
+# compushady.config.set_debug(True)
 
 
 class Type(IntEnum):

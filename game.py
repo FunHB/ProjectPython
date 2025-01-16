@@ -79,7 +79,7 @@ class Game:
         wind_surface.fill(pygame.Color(24, 24, 24))
         wind_center = pygame.Vector2(
             wind_surface.width / 2, wind_surface.height / 2)
-        wind_vector = pygame.Vector2(self.forest.wind) * 125
+        wind_vector = -pygame.Vector2(self.forest.wind.y, self.forest.wind.x) * 125
         pygame.draw.circle(wind_surface, pygame.Color(
             50, 50, 50), wind_center, 75)
         draw_arrow(wind_surface, wind_center - (wind_vector / 2),

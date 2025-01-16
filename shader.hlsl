@@ -71,9 +71,7 @@ int next_state(uint2 position) {
 
     // Fire -> Ash
     if (state == FIRE) {
-        if (noise[position.xy] < (2 - humidity[position.xy])) {
-            return ASH;
-        }
+        return ASH;
     }
 
     // Ash -> Empty
@@ -92,10 +90,10 @@ int next_state(uint2 position) {
     if (state == PLANT) {
         int2 fire_position = neighbors_check(position, FIRE);
         if (fire_position.x != -1 && fire_position.y != -1) {
-            float2 fire_direction = normalize(float2(((fire_position.xy) - position).xy));
+            float2 fire_direction = normalize(float2(position.xy) - float2(fire_position.xy));
             float angle = acos(dot(fire_direction.xy, wind.xy));
 
-            if (noise[position.xy] < spread_prob * (2 - humidity[position.xy]) * ease_in(angle / PI)) {
+            if (noise[position.xy] < spread_prob * (2 - humidity[position.xy]) * (angle / PI)) {
                 return FIRE;
             }
         }
@@ -109,6 +107,13 @@ int next_state(uint2 position) {
 void main(uint3 tid : SV_DispatchThreadID) {
     target[tid.xy] = next_state(tid.xy);
 
-    // Tests
-    // test[uint2(0, 0)] = wind.xy;
+    // // Tests
+    // uint2 fire_position = uint2(1, 1);
+    // uint2 position = uint2(0, 0);
+    // float2 fire_direction = normalize(float2(position.xy) - float2(fire_position.xy));
+    // float angle = acos(dot(fire_direction.xy, wind.xy));
+
+    // test[uint2(0, 0)] = fire_direction.xy;
+    // test[uint2(1, 0)] = wind.xy;
+    // test[uint2(2, 0)] = float2(angle, angle / PI);
 }
