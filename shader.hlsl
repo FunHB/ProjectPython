@@ -26,24 +26,21 @@ Texture2D<float> noise : register(t2);
 RWTexture2D<int> target : register(u0);
 // RWTexture2D<float2> test : register(u0);
 
-// float random(float2 p2) {
-//     float3 p3 = float3(p2.xy, random_seed);
-//     p3  = frac(p3 * .1031);
-//     p3 += dot(p3, p3.zyx + 31.32);
-//     return frac((p3.x + p3.y) * p3.z);
-// }
+float remap(float value, float in_from, float in_to, float out_from, float out_to) {
+    return out_from + (out_to - out_from) * (value - in_from) / (in_to - in_from);
+}
 
-int2 neighbors_check(uint2 position, int type) {
+int2 neighbors_check(uint2 origin, int type) {
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             if (i == 0 && j == 0) {
                 continue;
             }
 
-            int2 neighbor = int2(position.xy) + int2(i, j);
-            if (neighbor.x >= 0 && neighbor.x < size && neighbor.y >= 0 && neighbor.y < size) {
-                if (source[neighbor.xy] == type) {
-                    return neighbor;
+            int2 position = int2(origin) + int2(i, j);
+            if (position.x >= 0 && position.x < size && position.y >= 0 && position.y < size) {
+                if (source[position] == type) {
+                    return position;
                 }
             }
         }
@@ -52,17 +49,13 @@ int2 neighbors_check(uint2 position, int type) {
     return int2(-1, -1);
 }
 
-float ease_in(float value) {
-    return value * value;
-}
-
 int next_state(uint2 position) {
     // Any -> Lightning
-    if (noise[position.xy] < lightning_prob) {
+    if (noise[position] < lightning_prob) {
         return LIGHTNING;
     }
 
-    uint state = source[position.xy];
+    uint state = source[position];
 
     // Lightning -> Fire
     if (state == LIGHTNING) {
@@ -71,7 +64,9 @@ int next_state(uint2 position) {
 
     // Fire -> Ash
     if (state == FIRE) {
-        return ASH;
+        if (noise[position] < remap(humidity[position], 0.5, 1.5, .5, 1)) {
+            return ASH;
+        }
     }
 
     // Ash -> Empty
@@ -81,7 +76,7 @@ int next_state(uint2 position) {
 
     // Empty -> Plant
     if (state == EMPTY) {
-        if (neighbors_check(position, PLANT).x != -1 && noise[position.xy] < growth_prob) {
+        if (neighbors_check(position, PLANT).x != -1 && noise[position] < growth_prob) {
             return PLANT;
         }
     }
@@ -90,10 +85,10 @@ int next_state(uint2 position) {
     if (state == PLANT) {
         int2 fire_position = neighbors_check(position, FIRE);
         if (fire_position.x != -1 && fire_position.y != -1) {
-            float2 fire_direction = normalize(float2(position.xy) - float2(fire_position.xy));
-            float angle = acos(dot(fire_direction.xy, wind.xy));
+            float2 fire_direction = normalize(float2(position) - float2(fire_position));
+            float angle = acos(dot(fire_direction, wind));
 
-            if (noise[position.xy] < spread_prob * (2 - humidity[position.xy]) * (angle / PI)) {
+            if (noise[position] < spread_prob * (2 - humidity[position]) * (angle / PI)) {
                 return FIRE;
             }
         }

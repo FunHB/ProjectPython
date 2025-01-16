@@ -19,7 +19,7 @@ def main() -> None:
     try:
         params = load_config('config.json')
 
-        size = params.get('size')
+        fps = params.get('fps')
         tree_density = params.get('tree_density')
         lightning_prob = params.get('lightning_prob')
         growth_prob = params.get('growth_prob')
@@ -28,8 +28,7 @@ def main() -> None:
         wind_change = params.get('wind_change')
         radius = params.get('radius')
 
-        forest = Forest(size=size,
-                        tree_density=tree_density,
+        forest = Forest(tree_density=tree_density,
                         lightning_prob=lightning_prob,
                         growth_prob=growth_prob,
                         spread_prob=spread_prob,
@@ -37,7 +36,7 @@ def main() -> None:
                         wind_change=wind_change,
                         radius=radius)
 
-        game = Game(forest)
+        game = Game(forest, fps=fps)
         game.start()
 
     except Exception:

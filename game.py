@@ -12,7 +12,7 @@ matplotlib.use("Agg")
 
 
 class Game:
-    def __init__(self, forest: Forest, width: int = 1600, height: int = 900) -> None:
+    def __init__(self, forest: Forest, width: int = 1600, height: int = 900, fps = 60) -> None:
         pygame.init()
         pygame.display.set_caption("Symulacja Pożaru Lasu")
 
@@ -23,7 +23,7 @@ class Game:
         self.manager = pygame_gui.UIManager(
             (self.width, self.height), 'theme.json')
         self.clock = pygame.time.Clock()
-        self.fps = 10
+        self.fps = fps
         self.running = True
 
         self.single_block_size = height // forest.size
@@ -64,7 +64,7 @@ class Game:
         return ax
         
     def draw_humidity(self):
-        self.humidity_ax.imshow(np.flipud(np.rot90(self.forest.humidity)), cmap="viridis")
+        self.humidity_ax.imshow(np.flipud(np.rot90(2 - self.forest.humidity)), cmap="viridis")
 
         canvas = agg.FigureCanvasAgg(self.humidity_figure)
         canvas.draw()
@@ -77,15 +77,14 @@ class Game:
     def draw_wind_compass(self):
         wind_surface = pygame.surface.Surface((150, 150))
         wind_surface.fill(pygame.Color(24, 24, 24))
-        wind_center = pygame.Vector2(
-            wind_surface.width / 2, wind_surface.height / 2)
+        
+        wind_center = pygame.Vector2(wind_surface.width / 2, wind_surface.height / 2)
         wind_vector = -pygame.Vector2(self.forest.wind.y, self.forest.wind.x) * 125
-        pygame.draw.circle(wind_surface, pygame.Color(
-            50, 50, 50), wind_center, 75)
-        draw_arrow(wind_surface, wind_center - (wind_vector / 2),
-                   wind_center + (wind_vector / 2), [220, 0, 0], 2, 20, 10)
-        self.window_surface.blit(
-            wind_surface, (self.width - 400 + 100, self.height / 2 - 100))
+        
+        pygame.draw.circle(wind_surface, pygame.Color(50, 50, 50), wind_center, 75)
+        draw_arrow(wind_surface, wind_center - (wind_vector / 2), wind_center + (wind_vector / 2), [220, 0, 0], 2, 20, 10)
+        
+        self.window_surface.blit(wind_surface, (self.width - 400 + 100, self.height / 2 - 100))
 
     def process_events(self, event):
         if event.type == pygame.QUIT:
@@ -94,7 +93,7 @@ class Game:
             if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
                 if event.ui_element == self.left_panel['restart_button']:
                     self.forest.simulation_reset()
-                    self.humidity_surface = self.initialize_humidity()
+                    self.humidity_surface = self.draw_humidity()
 
     def start(self) -> None:
         while self.running:
