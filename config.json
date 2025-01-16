@@ -1,5 +1,5 @@
 {
-    "size": 200,
+    "size": 256,
     "tree_density": 0.7,
     "lightning_prob": 0.000005,
     "growth_prob": 0.008,

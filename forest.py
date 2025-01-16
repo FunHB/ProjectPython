@@ -5,10 +5,18 @@ import scipy.stats as stats
 from scipy.ndimage import gaussian_filter
 import pandas as pd
 import pygame
-from enum import Enum
+import struct
+from enum import IntEnum
+
+import compushady
+import compushady.formats
+from compushady import HEAP_READBACK, Buffer, Texture2D, HEAP_UPLOAD, Compute
+from compushady.shaders import hlsl
+
+compushady.config.set_debug(True)
 
 
-class Type(Enum):
+class Type(IntEnum):
     EMPTY = 0
     TREE = 1
     BURNING = 2
@@ -30,22 +38,60 @@ class Forest:
 
         self.rng = np.random.default_rng()  # Seed do rng
         self.grid = self.initialize_grid()
+        self.new_grid = self.grid.copy()
         self.humidity = self.initialize_humidity(5, 15, (25, 75), 50)
-        # print(self.humidity)
         self.history = pd.DataFrame(
             columns=['step', 'burning', 'tree', 'empty'])
 
+        self.shader = hlsl.compile(open('./shader.hlsl').read())
+
+        self.humidity_texture = Texture2D(
+            size, size, compushady.formats.R32_FLOAT)
+        humidity_buffer = Buffer(self.humidity_texture.size, HEAP_UPLOAD)
+
+        humidity_buffer.upload(
+            b''.join([struct.pack('f', float(x)) for x in list(self.humidity.flatten())]))
+        humidity_buffer.copy_to(self.humidity_texture)
+
+        config = Buffer(96, HEAP_UPLOAD)
+        self.config_fast = Buffer(config.size)
+
+        config.upload(struct.pack('fff', growth_prob,
+                      spread_prob, lightning_prob))
+        config.copy_to(self.config_fast)
+
+        self.wind_config = Buffer(64, HEAP_UPLOAD)
+        self.wind_buffer = Buffer(self.wind_config.size)
+
+        self.source = Texture2D(self.size, self.size,
+                                compushady.formats.R8_UINT)
+        self.source_buffer = Buffer(self.source.size, HEAP_UPLOAD)
+
+        self.noise = Texture2D(self.size, self.size,
+                               compushady.formats.R32_FLOAT)
+        self.noise_buffer = Buffer(self.noise.size, HEAP_UPLOAD)
+
+        self.target = Texture2D(self.size, self.size,
+                                compushady.formats.R8_UINT)
+        self.target_buffer = Buffer(self.target.size, HEAP_READBACK)
+
+        self.compute = Compute(self.shader, cbv=[self.config_fast, self.wind_buffer], srv=[
+                               self.source, self.humidity_texture, self.noise], uav=[self.target])
+
     def initialize_humidity(self, min_clusters=3, max_clusters=10, sigma_range=(5, 25), noise_scale=10) -> np.ndarray:
-        x, y = np.meshgrid(np.linspace(0, self.size, self.size), np.linspace(0, self.size, self.size))
-    
+        x, y = np.meshgrid(np.linspace(0, self.size, self.size),
+                           np.linspace(0, self.size, self.size))
+
         # Randomize the number of clusters
         num_clusters = np.random.randint(min_clusters, max_clusters + 1)
-        
+
         # Randomize cluster parameters
-        centers = [(np.random.uniform(0, x.__len__()), np.random.uniform(0, y.__len__())) for _ in range(num_clusters)]
+        centers = [(np.random.uniform(0, x.__len__()), np.random.uniform(
+            0, y.__len__())) for _ in range(num_clusters)]
         amplitudes = [np.random.uniform(0.5, 1) for _ in range(num_clusters)]
-        sigmas = [(np.random.uniform(*sigma_range), np.random.uniform(*sigma_range)) for _ in range(num_clusters)]
-        
+        sigmas = [(np.random.uniform(*sigma_range), np.random.uniform(*sigma_range))
+                  for _ in range(num_clusters)]
+
         # Create Perlin-like noise
         noise_x = gaussian_filter(np.random.rand(*x.shape), sigma=noise_scale)
         noise_y = gaussian_filter(np.random.rand(*y.shape), sigma=noise_scale)
@@ -55,8 +101,10 @@ class Forest:
         for (cx, cy), A, (sigma_x, sigma_y) in zip(centers, amplitudes, sigmas):
             wobble_x = cx + noise_x
             wobble_y = cy + noise_y
-            result += A * np.exp(-((x - wobble_x)**2 / (2 * sigma_x**2) + (y - wobble_y)**2 / (2 * sigma_y**2)))
-        
+            result += A * \
+                np.exp(-((x - wobble_x)**2 / (2 * sigma_x**2) +
+                       (y - wobble_y)**2 / (2 * sigma_y**2)))
+
         return .5 + np.clip(result / np.max(result), 0, 1)
 
     def initialize_grid(self) -> np.ndarray:
@@ -109,6 +157,7 @@ class Forest:
         # Empty -> Tree
         if current_type == Type.EMPTY:
             if self.neighbors_check(pos, Type.TREE, self.radius) and self.rng.random() < self.growth_prob:
+                # self.humidity[pos] = np.clip(self.humidity[pos] + self.rng.random() * (.1 - .01) + .01, .5, 1.5)
                 return Type.TREE
 
         # Tree -> Burning
@@ -120,19 +169,35 @@ class Forest:
                 angle = np.arccos(fire.dot(self.wind))
 
                 if self.rng.random() < self.spread_prob * (2 - self.humidity[pos]) * (angle / np.pi):
+                    # self.humidity[pos] = np.clip(self.humidity[pos] - self.rng.random() * (.1 - .01) + .01, .5, 1.5)
                     return Type.BURNING
 
         # Default
         return current_type
 
     def next_gen(self, current_frame: int = None) -> None:
-        new_grid = self.grid.copy()
+        self.source_buffer.upload(bytes(list(self.grid.flatten())))
+        self.source_buffer.copy_to(self.source)
 
-        for i in range(self.size):
-            for j in range(self.size):
-                new_grid[i, j] = self.next_state((i, j))
+        self.noise_buffer.upload(b''.join([struct.pack('f', float(x)) for x in list(self.rng.random(size=(self.size**2)))]))
+        self.noise_buffer.copy_to(self.noise)
 
-        self.grid = new_grid
+        self.wind_config.upload(struct.pack('ff', self.wind.x, self.wind.y))
+        self.wind_config.copy_to(self.wind_buffer)
+
+        self.compute.dispatch(self.size // 16, self.size // 16, 1)
+
+        self.target.copy_to(self.target_buffer)
+        array = np.array(list(self.target_buffer.readback())
+                         ).reshape(self.size, self.size)
+
+        self.grid = array
+
+        # for i in range(self.size):
+        #     for j in range(self.size):
+        #         new_grid[i, j] = self.next_state((i, j))
+
+        # self.grid = new_grid
 
         burning_count = np.count_nonzero(self.grid == Type.BURNING)
         tree_count = np.count_nonzero(self.grid == Type.TREE)

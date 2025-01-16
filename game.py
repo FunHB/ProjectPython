@@ -23,10 +23,10 @@ class Game:
         self.manager = pygame_gui.UIManager(
             (self.width, self.height), 'theme.json')
         self.clock = pygame.time.Clock()
-        self.fps = 60
+        self.fps = 15
         self.running = True
 
-        self.single_block_size = 4
+        self.single_block_size = height // forest.size
         self.forest = forest
 
         self.left_panel = self.initialize_left_panel()
@@ -34,8 +34,10 @@ class Game:
         self.grid_surface = pygame.Surface((forest.size, forest.size))
         self.grid_pixels = np.zeros(
             (forest.size, forest.size, 3), dtype=np.uint8)
-        
-        self.humidity_surface = self.initialize_humidity()
+
+        self.humidity_figure = pylab.figure(figsize=[4, 4], dpi=100)
+        self.humidity_ax = self.initialize_humidity()
+        self.humidity_surface = self.draw_humidity()
 
     def initialize_left_panel(self):
         panel = {'rect': pygame.Rect((0, 0), (400, self.height)),
@@ -52,32 +54,38 @@ class Game:
         return panel
 
     def initialize_humidity(self):
-        fig = pylab.figure(figsize=[4, 4], dpi=100)
-        ax = fig.gca()
+        ax = self.humidity_figure.gca()
         ax.set_facecolor((24 / 255, 24 / 255, 24 / 255))
-        ax.imshow(np.flipud(np.rot90(self.forest.humidity)), cmap="viridis")
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(0)
         ax.axes.get_xaxis().set_ticks([])
         ax.axes.get_yaxis().set_ticks([])
+        
+        return ax
+        
+    def draw_humidity(self):
+        self.humidity_ax.imshow(np.flipud(np.rot90(self.forest.humidity)), cmap="viridis")
 
-        canvas = agg.FigureCanvasAgg(fig)
+        canvas = agg.FigureCanvasAgg(self.humidity_figure)
         canvas.draw()
         renderer = canvas.get_renderer()
         raw_data = renderer.tostring_argb()
-        
+
         size = canvas.get_width_height()
         return pygame.image.frombytes(raw_data, size, "ARGB")
 
     def draw_wind_compass(self):
         wind_surface = pygame.surface.Surface((150, 150))
         wind_surface.fill(pygame.Color(24, 24, 24))
-        wind_center = pygame.Vector2(wind_surface.width / 2, wind_surface.height / 2)
+        wind_center = pygame.Vector2(
+            wind_surface.width / 2, wind_surface.height / 2)
         wind_vector = pygame.Vector2(self.forest.wind) * 125
-        pygame.draw.circle(wind_surface, pygame.Color(50, 50, 50), wind_center, 75)
+        pygame.draw.circle(wind_surface, pygame.Color(
+            50, 50, 50), wind_center, 75)
         draw_arrow(wind_surface, wind_center - (wind_vector / 2),
-                    wind_center + (wind_vector / 2), [220, 0, 0], 2, 20, 10)
-        self.window_surface.blit(wind_surface, (self.width - 400 + 100, self.height / 2 - 100))
+                   wind_center + (wind_vector / 2), [220, 0, 0], 2, 20, 10)
+        self.window_surface.blit(
+            wind_surface, (self.width - 400 + 100, self.height / 2 - 100))
 
     def process_events(self, event):
         if event.type == pygame.QUIT:
@@ -100,6 +108,7 @@ class Game:
 
             # Aktualizacja stanu lasu
             self.forest.next_gen(pygame.time.get_ticks())
+            # self.humidity_surface = self.draw_humidity()
 
             # Aktualizacja kolorów pikseli
             color_array = self.get_color_array()
@@ -111,7 +120,8 @@ class Game:
 
             # Renderowanie GUI
             self.window_surface.fill((24, 24, 24))
-            self.window_surface.blit(self.humidity_surface, (self.width - 400, self.height - 400))
+            self.window_surface.blit(
+                self.humidity_surface, (self.width - 400, self.height - 400))
             self.window_surface.blit(scaled_grid, (400, 50))
             self.draw_wind_compass()
             self.manager.draw_ui(self.window_surface)
