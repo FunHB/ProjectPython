@@ -26,6 +26,7 @@ def main() -> None:
         spread_prob = params.get('spread_prob')
         humidity_change = params.get('humidity_change')
         humidity_change_fire = params.get('humidity_change_fire')
+        water_threshold = params.get('water_threshold')
         
         wind = params.get('wind')
         wind_change = params.get('wind_change')
@@ -37,6 +38,7 @@ def main() -> None:
                         spread_prob=spread_prob,
                         humidity_change=humidity_change,
                         humidity_change_fire=humidity_change_fire,
+                        water_threshold=water_threshold,
                         wind=wind,
                         wind_change=wind_change,
                         radius=radius)

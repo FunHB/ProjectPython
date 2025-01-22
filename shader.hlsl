@@ -4,6 +4,7 @@
 #define FIRE 2
 #define LIGHTNING 3
 #define ASH 4
+#define WATER 5
 
 #define PI 3.14159265359
 
@@ -64,12 +65,17 @@ void change_humidity(uint2 position, float change_value) {
 }
 
 int next_state(uint2 position) {
+    uint state = source[position];
+
+    // Leave Water Alone (Water -> Water)
+    if (state == WATER) {
+        return WATER;
+    }
+
     // Any -> Lightning
     if (noise[position] < lightning_prob) {
         return LIGHTNING;
     }
-
-    uint state = source[position];
 
     // Lightning -> Fire
     if (state == LIGHTNING) {

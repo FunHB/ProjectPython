@@ -4,8 +4,9 @@
     "lightning_prob": 0.000005,
     "growth_prob": 0.008,
     "spread_prob": 0.5,
-    "humidity_change": 0,
-    "humidity_change_fire": 0,
+    "water_threshold": 1.6,
+    "humidity_change": 0.001,
+    "humidity_change_fire": -0.01,
     "wind": [-1, 1],
     "wind_change": 5,
     "radius": 1

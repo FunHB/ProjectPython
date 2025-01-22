@@ -22,11 +22,12 @@ class Type(IntEnum):
     BURNING = 2
     LIGHTNING = 3
     ASH = 4
+    WATER = 5
 
 
 class Forest:
     def __init__(self, tree_density: float, lightning_prob: float, growth_prob: float,
-                 spread_prob: float, humidity_change: float, humidity_change_fire: float, wind: pygame.Vector2, wind_change: float, radius: int) -> None:
+                 spread_prob: float, humidity_change: float, humidity_change_fire: float, water_threshold: float, wind: pygame.Vector2, wind_change: float, radius: int) -> None:
         self.size = 256
         self.tree_density = tree_density
         self.lightning_prob = lightning_prob
@@ -34,15 +35,16 @@ class Forest:
         self.spread_prob = spread_prob
         self.humidity_change = humidity_change
         self.humidity_change_fire = humidity_change_fire
+        self.water_threshold = water_threshold
         
         self.wind = pygame.Vector2(wind).normalize()
         self.wind_change = wind_change
         self.radius = radius
 
         self.rng = np.random.default_rng()  # Seed do rng
+        self.humidity = self.initialize_humidity()
         self.grid = self.initialize_grid()
         self.new_grid = self.grid.copy()
-        self.humidity = self.initialize_humidity()
         self.history = pd.DataFrame(
             columns=['step', 'burning', 'tree', 'empty'])
 
@@ -110,7 +112,8 @@ class Forest:
         return .5 + self.generate_cluster_map(15, 20, sigma_range=(20, 50), noise_scale=25)
 
     def initialize_grid(self) -> np.ndarray:
-        return Type.TREE * (self.generate_cluster_map(15, 20, sigma_range=(20, 50), noise_scale=50) + np.random.normal(0, .1, size=(self.size, self.size)) >= self.tree_density)
+        trees = Type.TREE * (self.generate_cluster_map(15, 20, sigma_range=(20, 50), noise_scale=50) + np.random.normal(0, .1, size=(self.size, self.size)) >= self.tree_density)
+        return np.clip(trees + (Type.WATER * (self.humidity >= self.water_threshold)), 0, 5)
         # return self.rng.choice(
         #     np.array([Type.EMPTY, Type.TREE]),
         #     size=(self.size, self.size),
@@ -118,8 +121,8 @@ class Forest:
         # )
 
     def simulation_reset(self) -> None:
-        self.grid = self.initialize_grid()
         self.humidity = self.initialize_humidity()
+        self.grid = self.initialize_grid()
 
         self.humidity_buffer.upload(
             b''.join([struct.pack('f', float(x)) for x in list(self.humidity.flatten())]))

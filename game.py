@@ -151,6 +151,9 @@ class Game:
 
         # Type.ASH
         colors[grid_flat == Type.ASH] = [50, 50, 50]
+        
+        # Type.WATER
+        colors[grid_flat == Type.WATER] = [150, 150, 250]
 
         return colors.reshape((self.forest.size, self.forest.size, 3))
 
