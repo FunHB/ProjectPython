@@ -13,6 +13,8 @@ cbuffer Config : register(b0) {
     float growth_prob;
     float spread_prob;
     float lightning_prob;
+    float humidity_change;
+    float humidity_change_fire;
 }
 
 cbuffer Wind : register(b1) {
@@ -50,6 +52,17 @@ int2 neighbors_check(uint2 origin, int type) {
     return int2(-1, -1);
 }
 
+void change_humidity(uint2 position, float change_value) {
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            int2 neighbor = int2(position) + int2(i, j);
+            if (neighbor.x >= 0 && neighbor.x < size && neighbor.y >= 0 && neighbor.y < size) {
+                out_humidity[neighbor] = change_value;
+            }
+        }
+    }
+}
+
 int next_state(uint2 position) {
     // Any -> Lightning
     if (noise[position] < lightning_prob) {
@@ -78,13 +91,8 @@ int next_state(uint2 position) {
     // Empty -> Plant
     if (state == EMPTY) {
         if (neighbors_check(position, PLANT).x != -1 && noise[position] < growth_prob) {
-            for (int i = -1; i <= 1; i++) {
-                for (int j = -1; j <= 1; j++) {
-                    int2 neighbor = int2(position) + int2(i, j);
-                    if (neighbor.x >= 0 && neighbor.x < size && neighbor.y >= 0 && neighbor.y < size) {
-                        out_humidity[neighbor] = .001;
-                    }
-                }
+            if (humidity_change != 0) {
+                change_humidity(position, humidity_change);
             }
 
             return PLANT;
@@ -99,14 +107,10 @@ int next_state(uint2 position) {
             float angle = acos(dot(fire_direction, wind));
 
             if (noise[position] < spread_prob * (2 - humidity[position]) * (angle / PI)) {
-                for (int i = -1; i <= 1; i++) {
-                    for (int j = -1; j <= 1; j++) {
-                        int2 neighbor = int2(position) + int2(i, j);
-                        if (neighbor.x >= 0 && neighbor.x < size && neighbor.y >= 0 && neighbor.y < size) {
-                            out_humidity[neighbor] = -.01;
-                        }
-                    }
+                if (humidity_change_fire != 0) {
+                    change_humidity(position, humidity_change_fire);
                 }
+
                 return FIRE;
             }
         }

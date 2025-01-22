@@ -26,12 +26,15 @@ class Type(IntEnum):
 
 class Forest:
     def __init__(self, tree_density: float, lightning_prob: float, growth_prob: float,
-                 spread_prob: float, wind: pygame.Vector2, wind_change: float, radius: int) -> None:
+                 spread_prob: float, humidity_change: float, humidity_change_fire: float, wind: pygame.Vector2, wind_change: float, radius: int) -> None:
         self.size = 256
         self.tree_density = tree_density
         self.lightning_prob = lightning_prob
         self.growth_prob = growth_prob
         self.spread_prob = spread_prob
+        self.humidity_change = humidity_change
+        self.humidity_change_fire = humidity_change_fire
+        
         self.wind = pygame.Vector2(wind).normalize()
         self.wind_change = wind_change
         self.radius = radius
@@ -59,7 +62,7 @@ class Forest:
         config = Buffer(96, HEAP_UPLOAD)
         self.config_fast = Buffer(config.size)
 
-        config.upload(struct.pack('fff', growth_prob, spread_prob, lightning_prob))
+        config.upload(struct.pack('fffff', self.growth_prob, self.spread_prob, self.lightning_prob, self.humidity_change, self.humidity_change_fire))
         config.copy_to(self.config_fast)
 
         self.wind_config = Buffer(64, HEAP_UPLOAD)
@@ -79,7 +82,7 @@ class Forest:
                                srv=[self.source, self.humidity_texture, self.noise], 
                                uav=[self.target, self.humidity_out])
 
-    def initialize_humidity(self, min_clusters=15, max_clusters=20, sigma_range=(20, 50), noise_scale=25) -> np.ndarray:
+    def generate_cluster_map(self, min_clusters=15, max_clusters=20, sigma_range=(20, 50), noise_scale=25) -> np.ndarray:
         x, y = np.meshgrid(np.linspace(0, self.size, self.size), np.linspace(0, self.size, self.size))
 
         # Randomize the number of clusters
@@ -101,14 +104,18 @@ class Forest:
             wobble_y = cy + noise_y
             result += A * np.exp(-((x - wobble_x)**2 / (2 * sigma_x**2) + (y - wobble_y)**2 / (2 * sigma_y**2)))
 
-        return .5 + np.clip(result / np.max(result), 0, 1)
+        return np.clip(result / np.max(result), 0, 1)
+
+    def initialize_humidity(self):
+        return .5 + self.generate_cluster_map(15, 20, sigma_range=(20, 50), noise_scale=25)
 
     def initialize_grid(self) -> np.ndarray:
-        return self.rng.choice(
-            np.array([Type.EMPTY, Type.TREE]),
-            size=(self.size, self.size),
-            p=[1 - self.tree_density, self.tree_density]
-        )
+        return Type.TREE * (self.generate_cluster_map(15, 20, sigma_range=(20, 50), noise_scale=50) + np.random.normal(0, .1, size=(self.size, self.size)) >= self.tree_density)
+        # return self.rng.choice(
+        #     np.array([Type.EMPTY, Type.TREE]),
+        #     size=(self.size, self.size),
+        #     p=[1 - self.tree_density, self.tree_density]
+        # )
 
     def simulation_reset(self) -> None:
         self.grid = self.initialize_grid()

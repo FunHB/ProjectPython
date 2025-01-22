@@ -24,6 +24,9 @@ def main() -> None:
         lightning_prob = params.get('lightning_prob')
         growth_prob = params.get('growth_prob')
         spread_prob = params.get('spread_prob')
+        humidity_change = params.get('humidity_change')
+        humidity_change_fire = params.get('humidity_change_fire')
+        
         wind = params.get('wind')
         wind_change = params.get('wind_change')
         radius = params.get('radius')
@@ -32,6 +35,8 @@ def main() -> None:
                         lightning_prob=lightning_prob,
                         growth_prob=growth_prob,
                         spread_prob=spread_prob,
+                        humidity_change=humidity_change,
+                        humidity_change_fire=humidity_change_fire,
                         wind=wind,
                         wind_change=wind_change,
                         radius=radius)
