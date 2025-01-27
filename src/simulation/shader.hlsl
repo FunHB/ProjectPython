@@ -28,7 +28,6 @@ Texture2D<float> noise : register(t2);
 
 RWTexture2D<int> target : register(u0);
 RWTexture2D<float> out_humidity : register(u1);
-// RWTexture2D<float2> test : register(u0);
 
 float remap(float value, float in_from, float in_to, float out_from, float out_to) {
     return out_from + (out_to - out_from) * (value - in_from) / (in_to - in_from);
@@ -128,14 +127,4 @@ int next_state(uint2 position) {
 
 [numthreads(16, 16, 1)] void main(uint3 tid : SV_DispatchThreadID) {
     target[tid.xy] = next_state(tid.xy);
-
-    // // Tests
-    // uint2 fire_position = uint2(1, 1);
-    // uint2 position = uint2(0, 0);
-    // float2 fire_direction = normalize(float2(position.xy) - float2(fire_position.xy));
-    // float angle = acos(dot(fire_direction.xy, wind.xy));
-
-    // test[uint2(0, 0)] = fire_direction.xy;
-    // test[uint2(1, 0)] = wind.xy;
-    // test[uint2(2, 0)] = float2(angle, angle / PI);
 }
