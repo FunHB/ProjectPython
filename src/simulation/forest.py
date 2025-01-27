@@ -2,6 +2,8 @@ from src.simulation.types import Type
 from src.simulation.helpers import generate_cluster_map
 from src.simulation.gpu_compute import ForestComputeEngine
 
+from typing_extensions import Self
+
 import numpy as np
 import pandas as pd
 import pygame
@@ -43,7 +45,8 @@ class Forest:
         self.humidity = self.initialize_humidity()
         self.grid = self.initialize_grid()
 
-        self.history = pd.DataFrame(columns=['step', 'burning', 'tree', 'empty'])
+        self.history = pd.DataFrame(
+            columns=['step', 'burning', 'tree', 'empty'])
 
         self.compute_engine = ForestComputeEngine(
             shader_path=shader_path,
@@ -77,7 +80,7 @@ class Forest:
         )
         trees = (
                 (cluster + self.rng.normal(0, 0.1, size=(self.size, self.size)))
-                >= self.tree_density
+            >= self.tree_density
         )
 
         grid = np.zeros((self.size, self.size), dtype=np.uint8)
@@ -85,14 +88,26 @@ class Forest:
         grid[self.humidity >= self.water_threshold] = Type.WATER
         return grid
 
-    def simulation_reset(self) -> None:
-        self.humidity = self.initialize_humidity()
-        self.grid = self.initialize_grid()
-        self.history = pd.DataFrame(columns=['step', 'burning', 'tree', 'empty'])
+    def simulation_reset(self) -> Self:
+        # self.humidity = self.initialize_humidity()
+        # self.grid = self.initialize_grid()
+        # self.history = pd.DataFrame(
+        #     columns=['step', 'burning', 'tree', 'empty'])
+
+        return Forest(tree_density=self.tree_density,
+                      lightning_prob=self.lightning_prob,
+                      growth_prob=self.growth_prob,
+                      spread_prob=self.spread_prob,
+                      humidity_change=self.humidity_change,
+                      humidity_change_fire=self.humidity_change_fire,
+                      water_threshold=self.water_threshold,
+                      wind=self.wind,
+                      wind_change=self.wind_change,
+                      radius=self.radius)
 
     def compute_next_gen(self):
-        self.compute_engine.update_grid(self.grid)
         self.compute_engine.update_humidity(self.humidity)
+        self.compute_engine.update_grid(self.grid)
 
         noise = self.rng.uniform(0, 1, size=(self.size**2))
         self.compute_engine.update_noise(noise)
@@ -125,6 +140,8 @@ class Forest:
                 'tree': [tree_count],
                 'empty': [empty_count]
             })
-            self.history = pd.concat([self.history, new_row], ignore_index=True)
+            self.history = pd.concat(
+                [self.history, new_row], ignore_index=True)
 
-        self.wind = self.wind.rotate((2 * self.rng.random() - 1) * self.wind_change)
+        self.wind = self.wind.rotate(
+            (2 * self.rng.random() - 1) * self.wind_change)
