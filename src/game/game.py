@@ -50,7 +50,6 @@ class Game:
                 if (event.user_type == pygame_gui.UI_BUTTON_PRESSED
                         and event.ui_element == self.left_panel.restart_button):
                     self.forest = self.forest.simulation_reset()
-                    self.humidity_surface = self.update_humidity_surface()
 
             self.manager.process_events(event)
 

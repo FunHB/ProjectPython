@@ -89,11 +89,6 @@ class Forest:
         return grid
 
     def simulation_reset(self) -> Self:
-        # self.humidity = self.initialize_humidity()
-        # self.grid = self.initialize_grid()
-        # self.history = pd.DataFrame(
-        #     columns=['step', 'burning', 'tree', 'empty'])
-
         return Forest(tree_density=self.tree_density,
                       lightning_prob=self.lightning_prob,
                       growth_prob=self.growth_prob,
