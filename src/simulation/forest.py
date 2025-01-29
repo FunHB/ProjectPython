@@ -80,7 +80,7 @@ class Forest:
         )
         trees = (
                 (cluster + self.rng.normal(0, 0.1, size=(self.size, self.size)))
-            >= self.tree_density
+            >= 1 - self.tree_density
         )
 
         grid = np.zeros((self.size, self.size), dtype=np.uint8)
